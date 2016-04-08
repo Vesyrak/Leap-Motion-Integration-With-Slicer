@@ -118,10 +118,49 @@ class Slicer:
     def __init__(self):
         self.lm=slicer.app.layoutManager()
         self.view=self.lm.threeDWidget(0).threeDView()
-        self.view.yawDirection=self.view.YawLeft
         self.view.setPitchRollYawIncrement(10)
-    def yaw(self):
+        #This is an axis:
+        self.axis=ctk.ctkAxesWidget()
+        self.axis.Anterior #This equals to 5, it's an enum
+    def Rotate(direction):
+        if direction == "Left":
+            rotateLeft()
+        elif direction == "Right":
+            rotateRight()
+        elif direction=="Up":
+            rotateUp()
+        elif direction=="Down":
+            rotateDown()
+        elif direction=="CW":
+            rotateCW()
+        elif direction=="CCW":
+            rotateCCW()
+    def rotateLeft():
+        self.view.yawDirection=self.view.YawLeft
         self.view.yaw()
+    def rotateRight():
+        self.view.yawDirection=self.view.YawRight
+        self.view.yaw()
+    def rotateUp():
+        self.view.pitchDirection=self.view.PitchUp
+        self.view.pitch()
+    def rotateDown():
+        self.view.pitchDirection=self.view.PitchDown
+        self.view.pitch()
+    def rotateCW():
+        self.view.rollDirection=self.view.RollLeft
+        self.view.roll()
+    def rotateCCW():
+        self.view.rollDirection=self.view.RollRight
+        self.view.roll()
+    def zoomOut():
+        self.view.zoomOut()
+    def zoomIn():
+        self.view.zoomIn()
+    def moveImg(x, y, z):
+        self.view.setFocalPoint(x,y,z)
+    def rotateToAxis(axis):
+        self.view.lookFromViewAxis(axis)
 
 class SampleListener(Leap.Listener):
     def __init__(self, leapbinder):
