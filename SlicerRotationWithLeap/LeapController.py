@@ -122,6 +122,14 @@ class Slicer:
         #This is an axis:
         self.axis=ctk.ctkAxesWidget()
         self.axis.Anterior #This equals to 5, it's an enum
+        #This gets the volume in MRHead
+        self.vol=slicer.util.getNode('MR*')
+        #This creates a matrix for linear transforms
+        self.matrix=vtk.vtkTransform()
+        self.matrix.Translate(1,1,1)
+        #Linear transformer. We need to combine this(or an alternative) to the Scalar volume
+        self.transform=slicer.vtkMRMLLinearTransformNode()
+#        self.transform.SetAndObserveMatrixTransformToParent()
     def Rotate(direction):
         if direction == "Left":
             rotateLeft()
@@ -135,31 +143,31 @@ class Slicer:
             rotateCW()
         elif direction=="CCW":
             rotateCCW()
-    def rotateLeft():
+    def rotateLeft(self):
         self.view.yawDirection=self.view.YawLeft
         self.view.yaw()
-    def rotateRight():
+    def rotateRight(self):
         self.view.yawDirection=self.view.YawRight
         self.view.yaw()
-    def rotateUp():
+    def rotateUp(self):
         self.view.pitchDirection=self.view.PitchUp
         self.view.pitch()
-    def rotateDown():
+    def rotateDown(self):
         self.view.pitchDirection=self.view.PitchDown
         self.view.pitch()
-    def rotateCW():
+    def rotateCCW(self):
         self.view.rollDirection=self.view.RollLeft
         self.view.roll()
-    def rotateCCW():
+    def rotateCW(self):
         self.view.rollDirection=self.view.RollRight
         self.view.roll()
-    def zoomOut():
+    def zoomOut(self):
         self.view.zoomOut()
-    def zoomIn():
+    def zoomIn(self):
         self.view.zoomIn()
-    def moveImg(x, y, z):
+    def moveImg(self,x, y, z):
         self.view.setFocalPoint(x,y,z)
-    def rotateToAxis(axis):
+    def rotateToAxis(self,axis):
         self.view.lookFromViewAxis(axis)
 
 class SampleListener(Leap.Listener):
