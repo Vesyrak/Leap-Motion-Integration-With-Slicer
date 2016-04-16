@@ -123,13 +123,22 @@ class Slicer:
         self.axis=ctk.ctkAxesWidget()
         self.axis.Anterior #This equals to 5, it's an enum
         #This gets the volume in MRHead
-        self.vol=slicer.util.getNode('MR*')
-        #This creates a matrix for linear transforms
-        self.matrix=vtk.vtkTransform()
-        self.matrix.Translate(1,1,1)
-        #Linear transformer. We need to combine this(or an alternative) to the Scalar volume
+        self.camera=slicer.util.getNode('Default Scene Camera')
         self.transform=slicer.vtkMRMLLinearTransformNode()
+        #This creates a matrix for linear transforms
+        slicer.mrmlScene.AddNode(transform)
+        camera.SetAndObserveTransformNodeID(transform.GetID())
+        self.matrix=vtk.vtkTransform()
+        #Linear transformer. We need to combine this(or an alternative) to the Scalar volume
 #        self.transform.SetAndObserveMatrixTransformToParent()
+
+    def TransformMatrix():
+        transform.GetMatrixTransformToParent(matrix.GetMatrix())
+        newmatrix.RotateX(20)
+        vtk.vtkMatrix4x4.Multiply4x4(matrix.GetMatrix(), newmatrix.GetMatrix(), outmatrix.GetMatrix())
+
+        transform.SetMatrixTransformToParent(outmatrix.GetMatrix())
+
     def Rotate(direction):
         if direction == "Left":
             rotateLeft()
@@ -143,28 +152,23 @@ class Slicer:
             rotateCW()
         elif direction=="CCW":
             rotateCCW()
+        self.transform.SetMatrixTransformToParent(self.matrix.GetMatrix())
     def rotateLeft(self):
-        self.view.yawDirection=self.view.YawLeft
-        self.view.yaw()
+        self.matrix.RotateZ(self.degrees)
     def rotateRight(self):
-        self.view.yawDirection=self.view.YawRight
-        self.view.yaw()
+        self.matrix.RotateZ(-self.degrees)
     def rotateUp(self):
-        self.view.pitchDirection=self.view.PitchUp
-        self.view.pitch()
+        self.matrix.RotateX(-self.degrees)
     def rotateDown(self):
-        self.view.pitchDirection=self.view.PitchDown
-        self.view.pitch()
+        self.matrix.RotateX(self.degrees)
     def rotateCCW(self):
-        self.view.rollDirection=self.view.RollLeft
-        self.view.roll()
+        self.matrix.RotateY(-self.degrees)
     def rotateCW(self):
-        self.view.rollDirection=self.view.RollRight
-        self.view.roll()
+        self.matrix.RotateY(self.degrees)
     def zoomOut(self):
-        self.view.zoomOut()
+        self.matrix.Translate(0, self.zoom, 0)
     def zoomIn(self):
-        self.view.zoomIn()
+        self.matrix.Translate(0,-self.zoom,0)
     def moveImg(self,x, y, z):
         self.view.setFocalPoint(x,y,z)
     def rotateToAxis(self,axis):
