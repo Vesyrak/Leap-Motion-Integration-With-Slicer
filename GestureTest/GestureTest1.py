@@ -39,7 +39,7 @@ class LeapMotionListener(Leap.Listener):
 
         sphere_center = hand.sphere_center
         sphere_diameter = 2 * hand.sphere_radius
-        print sphere_diameter
+        print "Diameter: "+ str(sphere_diameter)
 
         """print "Frame ID:   " + str(frame.id) \
             + " # of Hands " + str(len(frame.hands))
