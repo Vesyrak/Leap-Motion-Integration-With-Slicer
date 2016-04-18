@@ -118,10 +118,61 @@ class Slicer:
     def __init__(self):
         self.lm=slicer.app.layoutManager()
         self.view=self.lm.threeDWidget(0).threeDView()
-        self.view.yawDirection=self.view.YawLeft
         self.view.setPitchRollYawIncrement(10)
-    def yaw(self):
-        self.view.yaw()
+        #This is an axis:
+        self.axis=ctk.ctkAxesWidget()
+        self.axis.Anterior #This equals to 5, it's an enum
+        #This gets the volume in MRHead
+        self.camera=slicer.util.getNode('Default Scene Camera')
+        self.transform=slicer.vtkMRMLLinearTransformNode()
+        #This creates a matrix for linear transforms
+        slicer.mrmlScene.AddNode(transform)
+        camera.SetAndObserveTransformNodeID(transform.GetID())
+        self.matrix=vtk.vtkTransform()
+        #Linear transformer. We need to combine this(or an alternative) to the Scalar volume
+#        self.transform.SetAndObserveMatrixTransformToParent()
+
+    def TransformMatrix():
+        transform.GetMatrixTransformToParent(matrix.GetMatrix())
+        newmatrix.RotateX(20)
+        vtk.vtkMatrix4x4.Multiply4x4(matrix.GetMatrix(), newmatrix.GetMatrix(), outmatrix.GetMatrix())
+
+        transform.SetMatrixTransformToParent(outmatrix.GetMatrix())
+
+    def Rotate(direction):
+        if direction == "Left":
+            rotateLeft()
+        elif direction == "Right":
+            rotateRight()
+        elif direction=="Up":
+            rotateUp()
+        elif direction=="Down":
+            rotateDown()
+        elif direction=="CW":
+            rotateCW()
+        elif direction=="CCW":
+            rotateCCW()
+        self.transform.SetMatrixTransformToParent(self.matrix.GetMatrix())
+    def rotateLeft(self):
+        self.matrix.RotateZ(self.degrees)
+    def rotateRight(self):
+        self.matrix.RotateZ(-self.degrees)
+    def rotateUp(self):
+        self.matrix.RotateX(-self.degrees)
+    def rotateDown(self):
+        self.matrix.RotateX(self.degrees)
+    def rotateCCW(self):
+        self.matrix.RotateY(-self.degrees)
+    def rotateCW(self):
+        self.matrix.RotateY(self.degrees)
+    def zoomOut(self):
+        self.matrix.Translate(0, self.zoom, 0)
+    def zoomIn(self):
+        self.matrix.Translate(0,-self.zoom,0)
+    def moveImg(self,x, y, z):
+        self.view.setFocalPoint(x,y,z)
+    def rotateToAxis(self,axis):
+        self.view.lookFromViewAxis(axis)
 
 class SampleListener(Leap.Listener):
     def __init__(self, leapbinder):
