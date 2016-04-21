@@ -1,4 +1,4 @@
-import os, sys
+﻿import os, sys
 import unittest
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
@@ -103,9 +103,10 @@ class LeapBinder:
             self.bindings[state]=[function]
         else: self.bindings[state].append(function)
     def Remove(self, state, function):
-        if len(self.bindings[state])==1:
-            self.bindings.pop(state)
-        else: self.bindings[state].remove(function)
+        if state in function:
+            if len(self.bindings[state])==1:
+                self.bindings.pop(state)
+            else: self.bindings[state].remove(function)
     def CallFunction(self, state):
         for i in self.bindings[state]:
             try:
