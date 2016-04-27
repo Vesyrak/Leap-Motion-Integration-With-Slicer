@@ -59,7 +59,7 @@ class LeapControllerWidget(ScriptedLoadableModuleWidget):
         self.startButton.connect('clicked()',self.onStartButton)
         controllerFormLayout.addWidget(self.startButton)
 
-        # Stop Button
+        # Start Button
         self.stopButton = qt.QPushButton("Stop")
         self.stopButton.toolTip = "Stop running the Leap"
         self.stopButton.connect('clicked()',self.onStopButton)
@@ -70,7 +70,7 @@ class LeapControllerWidget(ScriptedLoadableModuleWidget):
 
     def onStartButton(self):
         self.logic = LeapControllerLogic()
-        #self.logic.bind()
+        self.logic.bind()
     def onStopButton(self):
         self.logic.stop()
 
@@ -85,7 +85,7 @@ class LeapControllerLogic(ScriptedLoadableModuleLogic):
         self.listener=SampleListener(self.leapbinder)
         self.controller=Leap.Controller()
         self.controller.add_listener(self.listener)
-        #self.slicer=Slicer()
+        self.slicer=Slicer()
         self.controls=["CircleLeft", "CircleRight"]
     def stop(self):
         print "Stopping Leap Controller Reads"
@@ -103,9 +103,10 @@ class LeapBinder:
             self.bindings[state]=[function]
         else: self.bindings[state].append(function)
     def Remove(self, state, function): #check mistakes
-        if len(self.bindings[state])==1:
-            self.bindings.pop(state)
-        else: self.bindings[state].remove(function)
+        if state in function:
+            if len(self.bindings[state])==1:
+                self.bindings.pop(state)
+            else: self.bindings[state].remove(function)
     def CallFunction(self, state):
         for i in self.bindings[state]:
             try:
@@ -178,6 +179,7 @@ class SampleListener(Leap.Listener):
     def __init__(self, leapbinder):
         super(SampleListener, self).__init__()
         self.leapbinder=leapbinder
+
     def on_connect(self, controller):
         print "Motion Sensor Connected"
         controller.enable_gesture(Leap.Gesture.TYPE_CIRCLE);
@@ -192,20 +194,27 @@ class SampleListener(Leap.Listener):
         print "Exited"
 
     def on_frame(self, controller):
+        # Get the most recent frame and report some basic information
         frame = controller.frame()
         print "on frame"
 
         hands = frame.hands
         for hand in frame.hands:
+            handType = "Left Hand" if hand.is_left else "Right Hand"
+
+            #print handType # + " Hand ID:  " + str(hand.id) + " Palm Position:  " + str(hand.palm_position)
+
             sphere_center = hand.sphere_center
             sphere_diameter = 2 * hand.sphere_radius
             pinch = hand.pinch_strength
             filtered_hand_position = hand.stabilized_palm_position #stabilized palm position of this Hand
+            #print "Diameter: " + str(sphere_diameter) + " Pinch: " + str(pinch) + " Hand pos: " + str(filtered_hand_position)
 
         for gesture in frame.gestures():
             if gesture.type == Leap.Gesture.TYPE_CIRCLE:
                 print "Circle"
                 circle = CircleGesture(gesture)
+                # Circle Gesture
 
                 if circle.pointable.direction.angle_to(circle.normal) <= Leap.PI/2:
                     clockwiseness = "clockwise"
@@ -215,7 +224,8 @@ class SampleListener(Leap.Listener):
                 """swept_angle = 0
                     if circle.state != Leap.Gesture.STATE_START:
                         previous = CircleGesture(controller.frame(1).gesture(circle.id))
-                        swept_angle = (circle.progress - previous.progress) * 2 * Leap.PI"""
+                        swept_angle = (circle.progress - previous.progress) * 2 * Leap.PI
+                    print "ID: " + str(CircleGesture.id) + " Progress: " + str(circle.progress) + " Radius: " + str(circle.radius) + " Swept Angle: " + str(swept_angle + Leap.RAD_TO_DEG) + "" + clockwiseness"""
 
                 try:
                     self.leapbinder.CallFunction("CircleLeft")
@@ -226,13 +236,12 @@ class SampleListener(Leap.Listener):
 
             if gesture.type is Leap.Gesture.TYPE_SCREEN_TAP:
                     screen_tap = ScreenTapGesture(gesture)
-                    print "Screen Tap ID: "+ str(gesture.id) + " State: " + self.state_names[gesture.state] + " Position: " + str(screen_tap.position) + " Directions: " + str(screen_tap.direction)
                     # Screen Tap Gesture
+                    #print "Screen Tap ID: "+ str(gesture.id) + " State: " + self.state_names[gesture.state] + " Position: " + str(screen_tap.position) + " Directions: " + str(screen_tap.direction)
                     controller.config.set("Gesture.ScreenTap.MinForwardVelocity", 50.0)
                     controller.config.set("Gesture.ScreenTap.HistorySeconds", .1)
                     controller.config.set("Gesture.ScreenTap.MinDistance", 5.0)
                     controller.config.save()
-
 
 class LeapControllerTest(ScriptedLoadableModuleTest):
     """
