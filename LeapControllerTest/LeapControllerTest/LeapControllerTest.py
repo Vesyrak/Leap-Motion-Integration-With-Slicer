@@ -67,7 +67,6 @@ class LeapControllerWidget(ScriptedLoadableModuleWidget):
     def cleanup(self):
         pass
 
-
     def onStartButton(self):
         self.logic = LeapControllerLogic()
         self.logic.bind()
@@ -201,8 +200,14 @@ class SampleListener(Leap.Listener):
         hands = frame.hands
         for hand in frame.hands:
             handType = "Left Hand" if hand.is_left else "Right Hand"
-
             #print handType # + " Hand ID:  " + str(hand.id) + " Palm Position:  " + str(hand.palm_position)
+
+            normal = hand.palm_normal #vector perpendicular to the plane formed by the palm of the hand. The vector points downward out of the palm
+            direction = hand.direction
+            pitch = hand.direction.pitch #angle around the x-axis
+            yaw = hand.direction.yaw #angle around the y-axis
+            roll = hand.palm_normal.roll #angle around the z-axis
+            #print " Pitch:  "+ str(direction.pitch * Leap.RAD_TO_DEG) + " Roll: " + str(normal.roll * Leap.RAD_TO_DEG) + " Yaw: " + str(direction.yaw * Leap.RAD_TO_DEG)
 
             sphere_center = hand.sphere_center
             sphere_diameter = 2 * hand.sphere_radius
