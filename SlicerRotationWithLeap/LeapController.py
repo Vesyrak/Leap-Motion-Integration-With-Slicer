@@ -37,7 +37,7 @@ class LeapControllerWidget(ScriptedLoadableModuleWidget):
     """Uses ScriptedLoadableModuleWidget base class, available at:
     https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
     """
-
+    logic=None
     def setup(self):
         ScriptedLoadableModuleWidget.setup(self)
 
@@ -72,7 +72,8 @@ class LeapControllerWidget(ScriptedLoadableModuleWidget):
         self.logic = LeapControllerLogic()
         self.logic.bind()
     def onStopButton(self):
-        self.logic.stop()
+        if self.logic !=  None:
+            self.logic.stop()
 
 #
 # LeapControllerLogic
@@ -118,8 +119,8 @@ class LeapBinder:
 class Slicer:
     def __init__(self):
         self.lm=slicer.app.layoutManager()
-        self.view=self.lm.threeDWidget(0).threeDView()
-        self.view.setPitchRollYawIncrement(10)
+        # self.view=self.lm.threeDWidget(0).threeDView()
+        # self.view.setPitchRollYawIncrement(10)
         #This is an axis:
         self.axis=ctk.ctkAxesWidget()
         self.axis.Anterior #This equals to 5, it's an enum
@@ -301,13 +302,13 @@ class LeapControllerTest(ScriptedLoadableModuleTest):
     # Create a sample listener and controller
     listener = LeapMotionListener()
     controller = Leap.Controller()
-    
+
     # Have the sample listener receive events from the controller
     controller.add_listener(listener)
 
     # Keep this process running until Enter is pressed
     print "Press enter to quit..."
-    
+
     try:
         sys.stdin.readline()
     except KeyboardInterrupt:
