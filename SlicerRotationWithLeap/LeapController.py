@@ -37,10 +37,10 @@ class LeapControllerWidget(ScriptedLoadableModuleWidget):
     """Uses ScriptedLoadableModuleWidget base class, available at:
     https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
     """
-    logic=None
+    # logic=None
     def setup(self):
         ScriptedLoadableModuleWidget.setup(self)
-
+        self.logic = LeapControllerLogic()
         # Instantiate and connect widgets ...
 
         #
@@ -69,7 +69,6 @@ class LeapControllerWidget(ScriptedLoadableModuleWidget):
 
 
     def onStartButton(self):
-        self.logic = LeapControllerLogic()
         self.logic.bind()
     def onStopButton(self):
         if self.logic !=  None:
@@ -83,22 +82,22 @@ class LeapControllerLogic(ScriptedLoadableModuleLogic):
     def __init__(self):
         print "Initiation Leap Controller Reads"
         self.leapbinder=LeapBinder()
-        self.listener=SampleListener(self.leapbinder)
         self.controller=Leap.Controller()
-        self.controller.add_listener(self.listener)
+        self.listener=SampleListener(self.controller, self.leapbinder)
+
         self.slicer=Slicer()
         self.controls=["CircleLeft", "CircleRight"]
     def stop(self):
         print "Stopping Leap Controller Reads"
-        self.controller.remove_listener(self.listener)
+        self.listener.stop()
     def bind(self):
-        self.leapbinder.Bind("CircleLeft", self.slicer.yaw)
-
+        self.leapbinder.Bind("CircleLeft", self.slicer.rotateLeft)
+        self.leapbinder.Bind("CircleRight", self.slicer.rotateRight)
+        self.listener.start()
 class LeapBinder:
     """Currently used as Event Binder."""
     def __init__(self):
         self.bindings={}
-
     def Bind(self, state, function):
         if state not in self.bindings:
             self.bindings[state]=[function]
@@ -108,38 +107,38 @@ class LeapBinder:
             if len(self.bindings[state])==1:
                 self.bindings.pop(state)
             else: self.bindings[state].remove(function)
-    def CallFunction(self, state):
+    def CallFunction(self, state, frame):
         for i in self.bindings[state]:
             try:
-                i()
+                i(frame)
             except Exception, e:
                 print str(e)
                 print "Exiting due to error"
-                sys.exit()
+                # sys.exit()
 class Slicer:
     def __init__(self):
         self.lm=slicer.app.layoutManager()
         # self.view=self.lm.threeDWidget(0).threeDView()
         # self.view.setPitchRollYawIncrement(10)
         #This is an axis:
-        self.axis=ctk.ctkAxesWidget()
-        self.axis.Anterior #This equals to 5, it's an enum
+        # self.axis=ctk.ctkAxesWidget()
+        # self.axis.Anterior #This equals to 5, it's an enum
         #This gets the volume in MRHead
         self.camera=slicer.util.getNode('Default Scene Camera')
         self.transform=slicer.vtkMRMLLinearTransformNode()
         #This creates a matrix for linear transforms
-        slicer.mrmlScene.AddNode(transform)
-        camera.SetAndObserveTransformNodeID(transform.GetID())
+        slicer.mrmlScene.AddNode(self.transform)
+        self.camera.SetAndObserveTransformNodeID(self.transform.GetID())
         self.matrix=vtk.vtkTransform()
+        self.degrees=1
         #Linear transformer. We need to combine this(or an alternative) to the Scalar volume
 #        self.transform.SetAndObserveMatrixTransformToParent()
 
-    def TransformMatrix():
-        transform.GetMatrixTransformToParent(matrix.GetMatrix())
-        newmatrix.RotateX(20)
-        vtk.vtkMatrix4x4.Multiply4x4(matrix.GetMatrix(), newmatrix.GetMatrix(), outmatrix.GetMatrix())
-
-        transform.SetMatrixTransformToParent(outmatrix.GetMatrix())
+    # def TransformMatrix():
+        # self.transform.GetMatrixTransformToParent(matrix.GetMatrix())
+        # self.newmatrix.RotateX(20)
+        # vtk.vtkMatrix4x4.Multiply4x4(matrix.GetMatrix(), newmatrix.GetMatrix(), outmatrix.GetMatrix())
+        # self.transform.SetMatrixTransformToParent(outmatrix.GetMatrix())
 
     def Rotate(direction):
         if direction == "Left":
@@ -155,55 +154,75 @@ class Slicer:
         elif direction=="CCW":
             rotateCCW()
         self.transform.SetMatrixTransformToParent(self.matrix.GetMatrix())
-    def rotateLeft(self): #check axes slicer vs Leap
+    def rotateLeft(self, frame): #check axes slicer vs Leap
+
         self.matrix.RotateZ(self.degrees)
-    def rotateRight(self):
+        self.transform.SetMatrixTransformToParent(self.matrix.GetMatrix())
+    def rotateRight(self, frame):
         self.matrix.RotateZ(-self.degrees)
-    def rotateUp(self):
+        self.transform.SetMatrixTransformToParent(self.matrix.GetMatrix())
+    def rotateUp(self, frame):
         self.matrix.RotateX(-self.degrees)
-    def rotateDown(self):
+    def rotateDown(self, frame):
         self.matrix.RotateX(self.degrees)
-    def rotateCCW(self):
+    def rotateCCW(self, frame):
         self.matrix.RotateY(-self.degrees)
-    def rotateCW(self):
+    def rotateCW(self, frame):
         self.matrix.RotateY(self.degrees)
-    def zoomOut(self): # link to diameter sphere
+    def zoomOut(self, frame): # link to diameter sphere
         self.matrix.Translate(0, self.zoom, 0)
-    def zoomIn(self):
+    def zoomIn(self, frame):
         self.matrix.Translate(0,-self.zoom,0)
-    def moveImg(self,x, y, z): # link to x,y,z of handpalm center average
-        self.view.setFocalPoint(x,y,z)
+    def moveImg(self, frame): # link to x,y,z of handpalm center average
+        hand = frame.hands.rightmost
+        index_finger_list = hand.fingers.finger_type(Finger.TYPE_INDEX)
+        index_finger = index_finger_list[0] #since there is only one per hand
+        bone = finger.bone(Bone.TYPE_DISTAL)
+        basis = bone.basis
+        x = basis.x_basis
+        y = basis.y_basis
+        z = basis.z_basis
+        self.view.setFocalPoint(x,y,z )
     def rotateToAxis(self,axis):
         self.view.lookFromViewAxis(axis)
 
 class SampleListener(Leap.Listener):
-    def __init__(self, leapbinder):
+    def __init__(self,controller, leapbinder):
+        print "ARRIBA ARRIBA"
         super(SampleListener, self).__init__()
         self.leapbinder=leapbinder
-
-    def on_connect(self, controller):
-        print "Motion Sensor Connected"
+        self.controller=controller
         controller.enable_gesture(Leap.Gesture.TYPE_CIRCLE);
         controller.enable_gesture(Leap.Gesture.TYPE_KEY_TAP);
         controller.enable_gesture(Leap.Gesture.TYPE_SCREEN_TAP);
         controller.enable_gesture(Leap.Gesture.TYPE_SWIPE);
+        self.run=False
+    def stop(self):
+        self.run=False
+    def start(self):
+        self.run=True
+        self.on_frame()
+    def on_connect(self, controller):
+        print "Motion Sensor Connected"
 
-    def on_disconnect(self, controller):
-        print "Motion Sensor Disconnected"
+    # def on_disconnect(self, controller):
+        # print "Motion Sensor Disconnected"
 
-    def on_exit(self, coltroller):
-        print "Exited"
+    # def on_exit(self, coltroller):
+        # print "Exited"
 
-    def on_frame(self, controller):
+    def on_frame(self):
         # Get the most recent frame and report some basic information
-        frame = controller.frame()
-        print "on frame"
+        print "Frame"
+
+        frame = self.controller.frame()
+        print frame
 
         hands = frame.hands
         for hand in frame.hands:
             handType = "Left Hand" if hand.is_left else "Right Hand"
 
-            #print handType # + " Hand ID:  " + str(hand.id) + " Palm Position:  " + str(hand.palm_position)
+            # print handType # + " Hand ID:  " + str(hand.id) + " Palm Position:  " + str(hand.palm_position)
 
             sphere_center = hand.sphere_center
             sphere_diameter = 2 * hand.sphere_radius
@@ -218,9 +237,9 @@ class SampleListener(Leap.Listener):
                 # Circle Gesture
 
                 if circle.pointable.direction.angle_to(circle.normal) <= Leap.PI/2:
-                    clockwiseness = "clockwise"
+                    clockwiseness = "CircleLeft"
                 else:
-                    clockwiseness = "counter-clockwise"
+                    clockwiseness = "CircleRight"
 
                 """swept_angle = 0
                     if circle.state != Leap.Gesture.STATE_START:
@@ -229,7 +248,7 @@ class SampleListener(Leap.Listener):
                     print "ID: " + str(CircleGesture.id) + " Progress: " + str(circle.progress) + " Radius: " + str(circle.radius) + " Swept Angle: " + str(swept_angle + Leap.RAD_TO_DEG) + "" + clockwiseness"""
 
                 try:
-                    self.leapbinder.CallFunction("CircleLeft")
+                    self.leapbinder.CallFunction(clockwiseness, frame)
                 except Exception, e:
                     print str(e)
                     print "Exiting due to error"
@@ -243,6 +262,8 @@ class SampleListener(Leap.Listener):
                     controller.config.set("Gesture.ScreenTap.HistorySeconds", .1)
                     controller.config.set("Gesture.ScreenTap.MinDistance", 5.0)
                     controller.config.save()
+        if self.run:
+            qt.QTimer.singleShot(100, self.on_frame)
 
 class LeapControllerTest(ScriptedLoadableModuleTest):
     """
@@ -263,41 +284,7 @@ class LeapControllerTest(ScriptedLoadableModuleTest):
         self.test_LeapController1()
 
     def test_LeapController1(self):
-        """ Ideally you should have several levels of tests.  At the lowest level
-        tests should exercise the functionality of the logic with different inputs
-        (both valid and invalid).  At higher levels your tests should emulate the
-        way the user would interact with your code and confirm that it still works
-        the way you intended.
-        One of the most important features of the tests is that it should alert other
-        developers when their changes will have an impact on the behavior of your
-        module.  For example, if a developer removes a feature that you depend on,
-        your test should break so they know that the feature is needed.
-        """
-
-        self.delayDisplay("Starting the test")
-        #
-        # first, get some data
-        #
-        import urllib
-        downloads = (
-            ('http://slicer.kitware.com/midas3/download?items=5767', 'FA.nrrd', slicer.util.loadVolume),
-            )
-
-        for url,name,loader in downloads:
-            filePath = slicer.app.temporaryPath + '/' + name
-            if not os.path.exists(filePath) or os.stat(filePath).st_size == 0:
-                logging.info('Requesting download %s from %s...\n' % (name, url))
-                urllib.urlretrieve(url, filePath)
-            if loader:
-                logging.info('Loading %s...' % (name,))
-                loader(filePath)
-        self.delayDisplay('Finished with download and loading') # downloading what from URL ???
-
-        volumeNode = slicer.util.getNode(pattern="FA")
-        logic = LeapControllerLogic()
-        self.assertTrue( logic.hasImageData(volumeNode) )
-        self.delayDisplay('Test passed!')
-
+        pass
 """def main():
     # Create a sample listener and controller
     listener = LeapMotionListener()
