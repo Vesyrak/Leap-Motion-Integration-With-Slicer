@@ -69,7 +69,6 @@ class LeapControllerWidget(ScriptedLoadableModuleWidget):
     def cleanup(self):
         pass
 
-
     def onStartButton(self):
         self.logic.bind()
     def onStopButton(self):
@@ -80,6 +79,7 @@ class LeapControllerWidget(ScriptedLoadableModuleWidget):
 # LeapControllerLogic
 #
 
+coord=[0,0,0]
 class LeapControllerLogic(ScriptedLoadableModuleLogic):
     def __init__(self):
         print "Initiation Leap Controller Reads"
@@ -88,26 +88,34 @@ class LeapControllerLogic(ScriptedLoadableModuleLogic):
         self.listener=SampleListener(self.controller, self.leapbinder)
         self.freerunning=False
         self.slicer=Slicer()
-        self.controls=["CircleLeft", "CircleRight"]
-        self.t0=time.time()
+        # self.t0=time.time()
     def stop(self):
         print "Stopping Leap Controller Reads"
         self.listener.stop()
     def stopStart(self, frame, historyframe):
-        t1= time.time()-self.t0
-        if t1>1.0:
-            print t1
-            self.t0=time.time()
-            if not self.freerunning:
-                self.leapbinder.Bind("Zoom", self.slicer.zoom)
-            else:
-                self.leapbinder.Remove("Zoom",self.slicer.zoom)
+        # t1= time.time()-self.t0
+        print frame.hands.rightmost.palm_normal.z
+        # print historyframe.hands.rightmost.palm_normal
+        # print frame.hands.rightmost.palm_normal-historyframe.hands.rightmost.palm_normal
+        # if t1>1.0:
+            # self.t0=time.time()
+            # if not self.freerunning:
+        # self.slicer.camera.SetFocalPoint(0, coord[1],0)
+        self.slicer.camera.GetFocalPoint(coord)
+        print coord
+        if frame.hands.rightmost.palm_normal.z>-0.6 and not self.freerunning:
+            # self.slicer.camera.ResetFocalPoint()
+            self.leapbinder.Bind("Zoom", self.slicer.zoom)
+            self.leapbinder.Bind("Rotate",self.slicer.rotateWXYZ)
             self.freerunning= not self.freerunning
+        elif frame.hands.rightmost.palm_normal.z<-0.6 and self.freerunning:
+            print "Not Reading"
+            self.leapbinder.Remove("Zoom",self.slicer.zoom)
+            self.leapbinder.Remove("Rotate",self.slicer.rotateWXYZ)
+            self.freerunning= not self.freerunning
+            self.slicer.camera.GetFocalPoint(coord)
     def bind(self):
-        # self.leapbinder.Bind("CircleLeft", self.slicer.rotateLeft)
-        # self.leapbinder.Bind("CircleRight", self.slicer.rotateRight)
-        self.leapbinder.Bind("CircleLeft", self.stopStart)
-        self.leapbinder.Bind("Rotate",self.slicer.rotateWXYZ)
+        self.leapbinder.Bind("Rotate", self.stopStart)
         self.listener.start()
 
 class LeapBinder:
@@ -151,8 +159,10 @@ class Slicer:
         self.transform.SetMatrixTransformToParent(self.matrix.GetMatrix())
     def rotateUp(self, frame, historyframe):
         self.matrix.RotateX(-self.degrees)
+        self.transform.SetMatrixTransformToParent(self.matrix.GetMatrix())
     def rotateDown(self, frame, historyframe):
         self.matrix.RotateX(self.degrees)
+        self.transform.SetMatrixTransformToParent(self.matrix.GetMatrix())
     def rotateCCW(self, frame, historyframe):
         self.matrix.RotateY(-self.degrees)
     def rotateCW(self, frame, historyframe):
@@ -161,43 +171,44 @@ class Slicer:
         difference= 2*(frame.hands.rightmost.sphere_radius-historyframe.hands.rightmost.sphere_radius)
         self.matrix.Translate(0,-difference,0)
         self.transform.SetMatrixTransformToParent(self.matrix.GetMatrix())
-    def moveImg(self, frame, historyframe): # link to x,y,z of handpalm center average
-        hand = frame.hands.rightmost
-        index_finger_list = hand.fingers.finger_type(Finger.TYPE_INDEX)
-        index_finger = index_finger_list[0] #since there is only one per hand
-        bonebasis = finger.bone(Bone.TYPE_DISTAL).basis
-        x = bonebasis.x_basis
-        y = bonebasis.y_basis
-        z = bonebasis.z_basis
-        self.view.setFocalPoint(x,y,z )
-    def rotateToAxis(self,axis, historyframe):
-        self.view.lookFromViewAxis(axis)
     def rotateWXYZ(self, frame, historyframe):
+        # index = frame.hands.rightmost.fingers.finger_type(Leap.Finger.TYPE_INDEX)[0]
+        # bonebasis = index.bone(Leap.Bone.TYPE_DISTAL).next_joint
+        # hindex = historyframe.hands.rightmost.fingers.finger_type(Leap.Finger.TYPE_INDEX)[0]
+        # hbonebasis = hindex.bone(Leap.Bone.TYPE_DISTAL).next_joint
+        bonebasis=frame.hands.rightmost.palm_position
+        hbonebasis=historyframe.hands.rightmost.palm_position
+        x = bonebasis.x
+        y = bonebasis.y
+        z = bonebasis.z
+        # print x -  hbonebasis.x
         hm = frame.hands.rightmost.stabilized_palm_position
-        hmo = historyframe.hands.rightmost.stabilized_palm_position
-        print hm.x-hmo.x
-        self.matrix.RotateX((hm.x - hmo.x)*180)
-        self.matrix.RotateZ((hm.y - hmo.y)*180)
-        self.matrix.RotateY((hm.z - hmo.z)*180)
+        hmo = historyframe.hands.rightmost.palm_normal
+        hms=historyframe.hands.rightmost.palm_normal
+        self.matrix.RotateX(-(y-hbonebasis.y)/2)
+        # self.matrix.RotateY(y)
+        self.matrix.RotateZ(-(x-hbonebasis.x)/2)
         self.transform.SetMatrixTransformToParent(self.matrix.GetMatrix())
+
 class SampleListener(Leap.Listener):
     def __init__(self,controller, leapbinder):
         super(SampleListener, self).__init__()
         self.leapbinder=leapbinder
         self.controller=controller
-        controller.enable_gesture(Leap.Gesture.TYPE_CIRCLE);
-        controller.enable_gesture(Leap.Gesture.TYPE_KEY_TAP);
-        controller.enable_gesture(Leap.Gesture.TYPE_SCREEN_TAP);
-        controller.enable_gesture(Leap.Gesture.TYPE_SWIPE);
-        controller.config.set("Gesture.ScreenTap.MinForwardVelocity", 20.0)
-        controller.config.set("Gesture.ScreenTap.HistorySeconds", .1)
-        controller.config.set("Gesture.ScreenTap.MinDistance", 2.0)
-        controller.config.save()
+        self.controller.config.set("Gesture.ScreenTap.MinForwardVelocity", 20.0)
+        self.controller.config.set("Gesture.ScreenTap.HistorySeconds", 1)
+        self.controller.config.set("Gesture.ScreenTap.MinDistance", 2.0)
+        self.controller.config.save()
+        self.controller.enable_gesture(Leap.Gesture.TYPE_CIRCLE);
+        self.controller.enable_gesture(Leap.Gesture.TYPE_KEY_TAP);
+        self.controller.enable_gesture(Leap.Gesture.TYPE_SCREEN_TAP);
+        self.controller.enable_gesture(Leap.Gesture.TYPE_SWIPE);
         self.run=False
         self.historyframe=None
     def stop(self):
         self.run=False
     def start(self):
+        print "Starting"
         self.run=True
         self.on_frame()
     def on_connect(self, controller):
@@ -205,7 +216,6 @@ class SampleListener(Leap.Listener):
 
     def on_frame(self):
         # Get the most recent frame and report some basic information
-
         frame = self.controller.frame()
         if self.historyframe is None:
             self.historyframe=frame
@@ -213,30 +223,36 @@ class SampleListener(Leap.Listener):
         hands = frame.hands
         for hand in frame.hands:
             handType = "Left Hand" if hand.is_left else "Right Hand"
-
             if handType=="Right Hand":
                 self.leapbinder.CallFunction("Zoom", frame, self.historyframe)
-                self.leapbinder.CallFunction("Rotate", frame, self.historyframe)
+                self.leapbinder.CallFunction("Rotate", frame,self.historyframe)
+
         for gesture in frame.gestures():
+            # if gesture.type == Leap.Gesture.TYPE_SWIPE:
+                # print self.controller.config.get("Gesture.Swipe.MinVelocity")
+                # swipe=SwipeGesture(gesture)
+                # print swipe.speed
+                # if abs(swipe.direction.x)>abs(swipe.direction.y):
+                    # if swipe.direction.x > 0:
+                        # self.leapbinder.CallFunction("SwipeRight", frame, self.historyframe)
+                    # else:
+                        # self.leapbinder.CallFunction("SwipeLeft", frame, self.historyframe, None)
+                # else:
+                    # if swipe.direction.y > 0:
+                        # self.leapbinder.CallFunction("SwipeUp", frame, self.historyframe, None)
+                    # else:
+                        # self.leapbinder.CallFunction("SwipeDown", frame, self.historyframe, None)
             if gesture.type == Leap.Gesture.TYPE_CIRCLE:
                 circle = CircleGesture(gesture)
-
                 if circle.pointable.direction.angle_to(circle.normal) <= Leap.PI/2:
                     clockwiseness = "CircleLeft"
                 else:
                     clockwiseness = "CircleRight"
+                self.leapbinder.CallFunction(clockwiseness, frame, self.historyframe)
 
-                try:
-                    self.leapbinder.CallFunction(clockwiseness, frame, self.historyframe)
-                except Exception, e:
-                    print str(e)
-                    print "Exiting due to error"
-
-            if gesture.type is Leap.Gesture.TYPE_SCREEN_TAP:
-                # screen_tap = ScreenTapGesture(gesture)
+            if gesture.type == Leap.Gesture.TYPE_SCREEN_TAP:
                 self.leapbinder.CallFunction("ScreenTap",frame, self.historyframe)
-                    # Screen Tap Gesture
-                    #print "Screen Tap ID: "+ str(gesture.id) + " State: " + self.state_names[gesture.state] + " Position: " + str(screen_tap.position) + " Directions: " + str(screen_tap.direction)
+
         self.historyframe=frame
         if self.run:
             qt.QTimer.singleShot(100, self.on_frame)
