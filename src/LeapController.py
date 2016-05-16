@@ -1,4 +1,9 @@
-﻿import os, sys
+﻿import os, sys, inspect
+src_dir = os.path.dirname(inspect.getfile(inspect.currentframe()))
+lib_dir = os.path.abspath(os.path.join(src_dir, '../lib'))
+sys.path.insert(0, lib_dir)
+arch_dir = '../lib/x64' if sys.maxsize > 2**32 else '../lib/x86'
+sys.path.insert(0, os.path.abspath(os.path.join(src_dir, arch_dir)))
 import unittest
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
@@ -10,6 +15,7 @@ import time
 #
 # LeapController
 #
+
 
 class LeapController(ScriptedLoadableModule):
     def __init__(self, parent):
