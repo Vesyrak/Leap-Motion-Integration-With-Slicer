@@ -23,13 +23,10 @@ lib_dir = os.path.abspath(os.path.join(src_dir, '../lib'))
 sys.path.insert(0, lib_dir)
 arch_dir = '../lib/x64' if sys.maxsize > 4294967296 else '../lib/x86'
 sys.path.insert(0, os.path.abspath(os.path.join(src_dir, arch_dir)))
-import unittest
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
-import logging
 import Leap
-from Leap import CircleGesture, KeyTapGesture, ScreenTapGesture, SwipeGesture
-import numpy
+from Leap import CircleGesture
 
 class LeapController(ScriptedLoadableModule):
 
