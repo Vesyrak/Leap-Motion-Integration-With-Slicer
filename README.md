@@ -15,3 +15,10 @@ Repository for development of integrating the leap motion device with slicer for
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+## Installation Manual
+
+* Install the latest version of 3D Slicer.
+* Download the integration software from GitHub and extract it to an easily retrievable folder.
+* Start up 3D Slicer. Go to Edit -> Application Settings -> Modules. Under “Additional Module Paths”, add the paths where you placed the integration software. Restart 3D Slicer.
+* The module should now be correctly installed, and is currently available under Gesture Control -> LeapController in Modules. 
