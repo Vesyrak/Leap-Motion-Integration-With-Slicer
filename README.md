@@ -1,8 +1,7 @@
 # Leap-Motion-Integration-With-Slicer
 Repository for development of integrating the leap motion device with slicer for medical purposes
   
-  
-   Copyright 2016 Reinout Eyckerman
+THIS REPOSITORY IS UNMAINTAINED DUE TO LACK OF DEVICES. FEEL FREE TO FORK AND EDIT AS YOU SEE FIT. 
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
